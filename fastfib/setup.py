@@ -12,28 +12,30 @@ class get_pybind_include:
     def __str__(self):
         return pybind11.get_include()
 
-# Compiler flags for maximum performance
-extra_compile_args = [
-    '-std=c++17',
-    '-O3',
-    '-march=native',
-    '-mtune=native',
-    '-ffast-math',
-    '-fopenmp',
-    '-funroll-loops',
-    '-fomit-frame-pointer',
-    '-finline-functions',
-]
-
-extra_link_args = [
-    '-fopenmp',
-]
-
-# Platform-specific adjustments
-if sys.platform == 'darwin':  # macOS
-    # macOS may need special OpenMP handling
-    extra_compile_args.remove('-fopenmp')
-    extra_link_args.remove('-fopenmp')
+# Platform-specific compiler flags
+if sys.platform == 'win32':  # Windows (MSVC)
+    extra_compile_args = [
+        '/std:c++17',
+        '/O2',          # Maximum optimization
+        '/openmp',      # OpenMP support
+        '/fp:fast',     # Fast floating point
+        '/GL',          # Whole program optimization
+        '/favor:blend', # Optimize for mixed workload
+    ]
+    extra_link_args = [
+        '/LTCG',        # Link-time code generation
+    ]
+elif sys.platform == 'darwin':  # macOS
+    extra_compile_args = [
+        '-std=c++17',
+        '-O3',
+        '-ffast-math',
+        '-funroll-loops',
+        '-fomit-frame-pointer',
+        '-finline-functions',
+    ]
+    extra_link_args = []
+    
     # Try to use libomp if available
     if os.path.exists('/usr/local/opt/libomp'):
         extra_compile_args.append('-Xpreprocessor')
@@ -41,6 +43,27 @@ if sys.platform == 'darwin':  # macOS
         extra_compile_args.append('-I/usr/local/opt/libomp/include')
         extra_link_args.append('-L/usr/local/opt/libomp/lib')
         extra_link_args.append('-lomp')
+    elif os.path.exists('/opt/homebrew/opt/libomp'):  # Apple Silicon
+        extra_compile_args.append('-Xpreprocessor')
+        extra_compile_args.append('-fopenmp')
+        extra_compile_args.append('-I/opt/homebrew/opt/libomp/include')
+        extra_link_args.append('-L/opt/homebrew/opt/libomp/lib')
+        extra_link_args.append('-lomp')
+else:  # Linux and other Unix-like (including WSL)
+    extra_compile_args = [
+        '-std=c++17',
+        '-O3',
+        '-march=native',
+        '-mtune=native',
+        '-ffast-math',
+        '-fopenmp',
+        '-funroll-loops',
+        '-fomit-frame-pointer',
+        '-finline-functions',
+    ]
+    extra_link_args = [
+        '-fopenmp',
+    ]
 
 ext_modules = [
     Extension(
