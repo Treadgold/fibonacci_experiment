@@ -102,6 +102,55 @@ When n increased from 10 to 100,000 (10,000x increase):
 
 The new **Fast Doubling** implementation is the fastest algorithm available!
 
+## The Binet's Formula Misconception: Why It's Not O(1)
+
+**Important Insight**: Binet's formula appears to be O(1) in theory, but that's a misconception when working with real computers.
+
+**Binet's formula assumes**:
+- Arithmetic operations on real numbers are O(1)
+- We have infinite precision available instantly
+- φ^n can be computed in constant time
+
+**In practice on real computers**, however:
+
+1. **Computing φ^n requires O(log n) multiplications** (using binary exponentiation)
+2. **Each multiplication gets more expensive** as numbers grow larger
+3. **Fibonacci F(n) has approximately 0.21·n digits**, so:
+   - Each multiplication is O(d²) or O(d log d) with fast algorithms
+   - Where d ≈ 0.21·n for large n
+
+So the **actual complexity of Binet's formula is O(log n × f(d))** where f(d) is the cost of multiplying d-digit numbers.
+
+**The empirical evidence from our benchmarks confirms this:**
+
+```
+Category              n |    Binet μs   Ratio
+------------------------------------------
+Tiny                 10 |    23.44     1.00x
+Ultra           100,000 |  25,064.93  1,069x
+```
+
+When n increased 10,000x, time increased only ~1,069x - clear **logarithmic behavior**, not constant!
+
+### Theoretical Computer Science vs Practical Computing
+
+| Algorithm | Theoretical | Real Computer | Why? |
+|-----------|------------|---------------|------|
+| Binet | O(1) | O(log n) | Need binary exponentiation + growing precision |
+| Matrix Exponentiation | O(log n) | O(log n) | Already assumes logarithmic multiplications |
+| Fast Doubling | O(log n) | O(log n) | Same as matrix, fewer operations |
+| Iterative | O(n) | O(n) | Matches theory |
+
+**The key misconception**: In theoretical analysis, we often assume the **RAM model** where:
+- All numbers fit in O(1) words
+- Arithmetic is O(1) per operation
+
+But for Fibonacci numbers that grow exponentially, we **violate the RAM model assumptions** - we need arbitrary precision arithmetic, which changes the complexity!
+
+**The fundamental truth**: There's no O(1) algorithm for computing large Fibonacci numbers on real computers because you can't even *read* an F(100,000) result (20,899 digits) in constant time! The output size itself is O(n), which sets a lower bound on complexity.
+
+This is why all practical "fast" Fibonacci algorithms converge to O(log n) behavior - it's the best we can achieve on real hardware with arbitrary precision.
+
 ## Quick Start
 
 ### Installation
