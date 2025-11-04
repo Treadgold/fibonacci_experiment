@@ -18,23 +18,23 @@ if sys.platform == 'win32':  # Windows (MSVC)
         '/std:c++17',
         '/O2',          # Maximum optimization
         '/openmp',      # OpenMP support
-        '/fp:fast',     # Fast floating point
         '/GL',          # Whole program optimization
         '/favor:blend', # Optimize for mixed workload
     ]
     extra_link_args = [
         '/LTCG',        # Link-time code generation
     ]
+    libraries = ['gmp']
 elif sys.platform == 'darwin':  # macOS
     extra_compile_args = [
         '-std=c++17',
         '-O3',
-        '-ffast-math',
         '-funroll-loops',
         '-fomit-frame-pointer',
         '-finline-functions',
     ]
     extra_link_args = []
+    libraries = ['gmp', 'gmpxx']
     
     # Try to use libomp if available
     if os.path.exists('/usr/local/opt/libomp'):
@@ -49,13 +49,20 @@ elif sys.platform == 'darwin':  # macOS
         extra_compile_args.append('-I/opt/homebrew/opt/libomp/include')
         extra_link_args.append('-L/opt/homebrew/opt/libomp/lib')
         extra_link_args.append('-lomp')
+    
+    # Add GMP paths for Homebrew
+    if os.path.exists('/usr/local/opt/gmp'):
+        extra_compile_args.append('-I/usr/local/opt/gmp/include')
+        extra_link_args.append('-L/usr/local/opt/gmp/lib')
+    elif os.path.exists('/opt/homebrew/opt/gmp'):  # Apple Silicon
+        extra_compile_args.append('-I/opt/homebrew/opt/gmp/include')
+        extra_link_args.append('-L/opt/homebrew/opt/gmp/lib')
 else:  # Linux and other Unix-like (including WSL)
     extra_compile_args = [
         '-std=c++17',
         '-O3',
         '-march=native',
         '-mtune=native',
-        '-ffast-math',
         '-fopenmp',
         '-funroll-loops',
         '-fomit-frame-pointer',
@@ -64,6 +71,7 @@ else:  # Linux and other Unix-like (including WSL)
     extra_link_args = [
         '-fopenmp',
     ]
+    libraries = ['gmp', 'gmpxx']
 
 ext_modules = [
     Extension(
@@ -74,6 +82,7 @@ ext_modules = [
             pybind11.get_include(),
         ],
         language='c++',
+        libraries=libraries,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
     ),
@@ -81,9 +90,9 @@ ext_modules = [
 
 setup(
     name='fastfib',
-    version='1.0.0',
+    version='2.0.0',
     author='FastFib Contributors',
-    description='Ultra-fast Fibonacci computation using C++ and Binet\'s formula',
+    description='Ultra-fast EXACT Fibonacci computation using C++, GMP, and matrix exponentiation',
     long_description=open('README.md').read() if os.path.exists('README.md') else '',
     long_description_content_type='text/markdown',
     ext_modules=ext_modules,

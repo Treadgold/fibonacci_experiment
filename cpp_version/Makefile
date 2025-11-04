@@ -2,8 +2,8 @@
 # Optimized for maximum performance
 
 CXX = g++
-CXXFLAGS = -std=c++17 -O3 -march=native -mtune=native -ffast-math -fopenmp
-LDFLAGS = -fopenmp -lm
+CXXFLAGS = -std=c++17 -O3 -march=native -mtune=native -fopenmp
+LDFLAGS = -fopenmp -lgmp -lgmpxx
 
 # Additional aggressive optimizations
 OPT_FLAGS = -funroll-loops -fomit-frame-pointer -finline-functions -flto
@@ -23,7 +23,7 @@ $(TARGET): $(SOURCE)
 
 # Build verification program
 $(VERIFY): $(VERIFY_SOURCE)
-	$(CXX) -std=c++17 -O3 -march=native -ffast-math -o $(VERIFY) $(VERIFY_SOURCE) -lm
+	$(CXX) -std=c++17 -O3 -march=native -o $(VERIFY) $(VERIFY_SOURCE) -lgmp -lgmpxx
 	@echo "✓ Verification program built: ./$(VERIFY)"
 
 # Build for debugging

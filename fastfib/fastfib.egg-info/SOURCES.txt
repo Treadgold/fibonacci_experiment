@@ -6,6 +6,7 @@ fib_bindings.cpp
 pyproject.toml
 setup.py
 test_fastfib.py
+test_gmp.py
 fastfib/__init__.py
 fastfib.egg-info/PKG-INFO
 fastfib.egg-info/SOURCES.txt

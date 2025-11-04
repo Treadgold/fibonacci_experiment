@@ -1,50 +1,98 @@
 /*
- * Python bindings for ultra-fast Fibonacci computation
- * Using pybind11 to expose C++ functions to Python
+ * Python bindings for ultra-fast EXACT Fibonacci computation
+ * Using pybind11 to expose C++ functions with GMP arbitrary precision
  */
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
-#include <cmath>
 #include <vector>
+#include <string>
 #include <omp.h>
+#include <gmp.h>
+#include <gmpxx.h>
 
 namespace py = pybind11;
 
-// Constants
-constexpr double SQRT5 = 2.2360679774997896964091736687312762;
-constexpr double PHI = 1.6180339887498948482045868343656381;
-constexpr double PSI = -0.61803398874989484820458683436563811;
-constexpr double INV_SQRT5 = 0.44721359549995793928183473374625524;
+// Matrix 2x2 structure for GMP
+struct Matrix2x2 {
+    mpz_class a, b, c, d;  // [[a, b], [c, d]]
+    
+    Matrix2x2() : a(0), b(0), c(0), d(0) {}
+    Matrix2x2(long a_, long b_, long c_, long d_) 
+        : a(a_), b(b_), c(c_), d(d_) {}
+};
 
-// Fast Fibonacci using Binet's formula
-inline double fib_binet(long long n) {
+// Multiply two 2x2 matrices
+inline Matrix2x2 matrix_mult(const Matrix2x2& A, const Matrix2x2& B) {
+    Matrix2x2 result;
+    result.a = A.a * B.a + A.b * B.c;
+    result.b = A.a * B.b + A.b * B.d;
+    result.c = A.c * B.a + A.d * B.c;
+    result.d = A.c * B.b + A.d * B.d;
+    return result;
+}
+
+// Fast matrix exponentiation: compute M^n in O(log n)
+Matrix2x2 matrix_pow(Matrix2x2 base, long long n) {
+    if (n == 0) {
+        return Matrix2x2(1, 0, 0, 1);  // Identity matrix
+    }
+    if (n == 1) {
+        return base;
+    }
+    
+    Matrix2x2 result(1, 0, 0, 1);  // Identity
+    
+    while (n > 0) {
+        if (n & 1) {  // If n is odd
+            result = matrix_mult(result, base);
+        }
+        base = matrix_mult(base, base);
+        n >>= 1;
+    }
+    
+    return result;
+}
+
+// Compute exact Fibonacci number using matrix exponentiation
+inline mpz_class fibonacci_exact_gmp(long long n) {
+    if (n == 0) return mpz_class(0);
+    if (n == 1) return mpz_class(1);
+    if (n == 2) return mpz_class(1);
+    
+    Matrix2x2 base(1, 1, 1, 0);
+    Matrix2x2 result = matrix_pow(base, n - 1);
+    
+    return result.a;
+}
+
+// Compute single Fibonacci number (returns as string for arbitrary precision)
+std::string fibonacci(long long n) {
     if (n < 0) {
         throw std::invalid_argument("n must be non-negative");
     }
-    if (n == 0) return 0.0;
-    if (n == 1) return 1.0;
     
-    // For large n, psi^n is negligible
-    if (n > 20) {
-        static const double LOG_PHI = std::log(PHI);
-        return std::exp(n * LOG_PHI) * INV_SQRT5;
-    } else {
-        // Full formula for smaller n (more accurate)
-        double phi_n = std::pow(PHI, n);
-        double psi_n = std::pow(PSI, n);
-        return std::round((phi_n - psi_n) * INV_SQRT5);
+    mpz_class result = fibonacci_exact_gmp(n);
+    return result.get_str();
+}
+
+// Compute single Fibonacci number as Python int (arbitrary precision)
+py::object fibonacci_int(long long n) {
+    if (n < 0) {
+        throw std::invalid_argument("n must be non-negative");
     }
+    
+    mpz_class result = fibonacci_exact_gmp(n);
+    std::string result_str = result.get_str();
+    
+    // Convert string to Python int using Python C API
+    PyObject* py_int = PyLong_FromString(result_str.c_str(), nullptr, 10);
+    return py::reinterpret_steal<py::object>(py_int);
 }
 
-// Compute single Fibonacci number
-double fibonacci(long long n) {
-    return fib_binet(n);
-}
-
-// Compute multiple Fibonacci numbers (returns Python list)
-std::vector<double> fibonacci_range(long long start, long long end, int num_threads = -1) {
+// Compute multiple Fibonacci numbers (returns list of strings)
+std::vector<std::string> fibonacci_range(long long start, long long end, int num_threads = -1) {
     if (start < 0 || end < 0) {
         throw std::invalid_argument("start and end must be non-negative");
     }
@@ -60,31 +108,20 @@ std::vector<double> fibonacci_range(long long start, long long end, int num_thre
     }
     
     const long long total = end - start + 1;
-    std::vector<double> results(total);
+    std::vector<std::string> results(total);
     
-    static const double LOG_PHI = std::log(PHI);
-    
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic, 10)
     for (long long i = 0; i < total; ++i) {
         long long n = start + i;
-        if (n == 0) {
-            results[i] = 0.0;
-        } else if (n == 1) {
-            results[i] = 1.0;
-        } else if (n > 20) {
-            results[i] = std::exp(n * LOG_PHI) * INV_SQRT5;
-        } else {
-            double phi_n = std::pow(PHI, n);
-            double psi_n = std::pow(PSI, n);
-            results[i] = std::round((phi_n - psi_n) * INV_SQRT5);
-        }
+        mpz_class fib = fibonacci_exact_gmp(n);
+        results[i] = fib.get_str();
     }
     
     return results;
 }
 
-// Compute multiple Fibonacci numbers (returns NumPy array)
-py::array_t<double> fibonacci_array(long long start, long long end, int num_threads = -1) {
+// Compute multiple Fibonacci numbers (returns list of Python ints)
+py::list fibonacci_range_int(long long start, long long end, int num_threads = -1) {
     if (start < 0 || end < 0) {
         throw std::invalid_argument("start and end must be non-negative");
     }
@@ -100,31 +137,75 @@ py::array_t<double> fibonacci_array(long long start, long long end, int num_thre
     }
     
     const long long total = end - start + 1;
+    std::vector<std::string> results(total);
     
-    // Create NumPy array
-    py::array_t<double> result(total);
-    py::buffer_info buf = result.request();
-    double* ptr = static_cast<double*>(buf.ptr);
-    
-    static const double LOG_PHI = std::log(PHI);
-    
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic, 10)
     for (long long i = 0; i < total; ++i) {
         long long n = start + i;
-        if (n == 0) {
-            ptr[i] = 0.0;
-        } else if (n == 1) {
-            ptr[i] = 1.0;
-        } else if (n > 20) {
-            ptr[i] = std::exp(n * LOG_PHI) * INV_SQRT5;
-        } else {
-            double phi_n = std::pow(PHI, n);
-            double psi_n = std::pow(PSI, n);
-            ptr[i] = std::round((phi_n - psi_n) * INV_SQRT5);
-        }
+        mpz_class fib = fibonacci_exact_gmp(n);
+        results[i] = fib.get_str();
+    }
+    
+    // Convert to Python list of ints
+    py::list py_results;
+    for (const auto& str : results) {
+        // Convert string to Python int using Python C API
+        PyObject* py_int = PyLong_FromString(str.c_str(), nullptr, 10);
+        py_results.append(py::reinterpret_steal<py::object>(py_int));
+    }
+    
+    return py_results;
+}
+
+// Compute multiple Fibonacci numbers (returns NumPy array of Python objects for arbitrary precision)
+py::array fibonacci_array(long long start, long long end, int num_threads = -1) {
+    if (start < 0 || end < 0) {
+        throw std::invalid_argument("start and end must be non-negative");
+    }
+    if (start > end) {
+        throw std::invalid_argument("start must be <= end");
+    }
+    
+    // Set number of threads
+    if (num_threads > 0) {
+        omp_set_num_threads(num_threads);
+    } else {
+        omp_set_num_threads(omp_get_max_threads());
+    }
+    
+    const long long total = end - start + 1;
+    std::vector<std::string> results(total);
+    
+    #pragma omp parallel for schedule(dynamic, 10)
+    for (long long i = 0; i < total; ++i) {
+        long long n = start + i;
+        mpz_class fib = fibonacci_exact_gmp(n);
+        results[i] = fib.get_str();
+    }
+    
+    // Create NumPy array of Python object type for arbitrary precision
+    py::array_t<py::object> result(total);
+    auto buf = result.request();
+    py::object* ptr = static_cast<py::object*>(buf.ptr);
+    
+    for (long long i = 0; i < total; ++i) {
+        // Convert string to Python int using Python C API
+        PyObject* py_int = PyLong_FromString(results[i].c_str(), nullptr, 10);
+        ptr[i] = py::reinterpret_steal<py::object>(py_int);
     }
     
     return result;
+}
+
+// Get digit count for F(n) without computing the full value
+long long fibonacci_digit_count(long long n) {
+    if (n < 0) {
+        throw std::invalid_argument("n must be non-negative");
+    }
+    if (n == 0) return 1;
+    
+    mpz_class result = fibonacci_exact_gmp(n);
+    return mpz_sizeinbase(result.get_mpz_t(), 10);
 }
 
 // Get number of available CPU cores
@@ -140,77 +221,121 @@ void set_num_threads(int n) {
     omp_set_num_threads(n);
 }
 
-// Get golden ratio
-double get_phi() {
-    return PHI;
-}
-
 // Module definition
 PYBIND11_MODULE(_fastfib, m) {
-    m.doc() = "Ultra-fast Fibonacci computation using Binet's formula and parallel processing";
+    m.doc() = "Ultra-fast EXACT Fibonacci computation using GMP arbitrary precision and matrix exponentiation";
     
-    // Single value function
-    m.def("fibonacci", &fibonacci, 
+    // Single value function (returns string)
+    m.def("fibonacci", 
+          [](long long n) -> std::string { return fibonacci(n); },
           py::arg("n"),
-          "Compute the nth Fibonacci number using Binet's formula.\n\n"
+          "Compute the nth Fibonacci number using matrix exponentiation (GMP).\n\n"
           "Args:\n"
           "    n: Non-negative integer index\n\n"
           "Returns:\n"
-          "    The nth Fibonacci number (as float for large n)\n\n"
+          "    String representation of the exact nth Fibonacci number\n\n"
           "Example:\n"
           "    >>> fibonacci(10)\n"
-          "    55.0\n"
+          "    '55'\n"
           "    >>> fibonacci(100)\n"
-          "    3.542248481792619e+20");
+          "    '354224848179261915075'");
     
-    // Range function returning list
-    m.def("fibonacci_range", &fibonacci_range,
+    // Single value function (returns Python int with arbitrary precision)
+    m.def("fibonacci_int",
+          [](long long n) -> py::object { return fibonacci_int(n); },
+          py::arg("n"),
+          "Compute the nth Fibonacci number as Python int with arbitrary precision.\n\n"
+          "Args:\n"
+          "    n: Non-negative integer index\n\n"
+          "Returns:\n"
+          "    Python int with exact value\n\n"
+          "Example:\n"
+          "    >>> fibonacci_int(100)\n"
+          "    354224848179261915075");
+    
+    // Range function returning list of strings
+    m.def("fibonacci_range",
+          [](long long start, long long end, int num_threads) -> std::vector<std::string> {
+              return fibonacci_range(start, end, num_threads);
+          },
           py::arg("start"),
           py::arg("end"),
           py::arg("num_threads") = -1,
-          "Compute Fibonacci numbers from start to end (inclusive).\n\n"
+          "Compute exact Fibonacci numbers from start to end (inclusive).\n\n"
           "Args:\n"
           "    start: Starting index (non-negative)\n"
           "    end: Ending index (non-negative, >= start)\n"
           "    num_threads: Number of CPU cores to use (-1 for all)\n\n"
           "Returns:\n"
-          "    List of Fibonacci numbers\n\n"
+          "    List of strings with exact Fibonacci values\n\n"
           "Example:\n"
           "    >>> fibonacci_range(10, 15)\n"
-          "    [55.0, 89.0, 144.0, 233.0, 377.0, 610.0]");
+          "    ['55', '89', '144', '233', '377', '610']");
     
-    // Range function returning NumPy array
-    m.def("fibonacci_array", &fibonacci_array,
+    // Range function returning list of Python ints
+    m.def("fibonacci_range_int",
+          [](long long start, long long end, int num_threads) -> py::list {
+              return fibonacci_range_int(start, end, num_threads);
+          },
           py::arg("start"),
           py::arg("end"),
           py::arg("num_threads") = -1,
-          "Compute Fibonacci numbers from start to end (inclusive) as NumPy array.\n\n"
+          "Compute exact Fibonacci numbers from start to end as Python ints.\n\n"
           "Args:\n"
           "    start: Starting index (non-negative)\n"
           "    end: Ending index (non-negative, >= start)\n"
           "    num_threads: Number of CPU cores to use (-1 for all)\n\n"
           "Returns:\n"
-          "    NumPy array of Fibonacci numbers\n\n"
+          "    List of Python ints with exact values\n\n"
+          "Example:\n"
+          "    >>> fibonacci_range_int(10, 15)\n"
+          "    [55, 89, 144, 233, 377, 610]");
+    
+    // Range function returning NumPy array
+    m.def("fibonacci_array",
+          [](long long start, long long end, int num_threads) -> py::array {
+              return fibonacci_array(start, end, num_threads);
+          },
+          py::arg("start"),
+          py::arg("end"),
+          py::arg("num_threads") = -1,
+          "Compute exact Fibonacci numbers from start to end as NumPy array.\n\n"
+          "Args:\n"
+          "    start: Starting index (non-negative)\n"
+          "    end: Ending index (non-negative, >= start)\n"
+          "    num_threads: Number of CPU cores to use (-1 for all)\n\n"
+          "Returns:\n"
+          "    NumPy array of Python object type with exact values\n\n"
           "Example:\n"
           "    >>> import numpy as np\n"
           "    >>> arr = fibonacci_array(10, 15)\n"
           "    >>> arr\n"
-          "    array([55., 89., 144., 233., 377., 610.])");
+          "    array([55, 89, 144, 233, 377, 610], dtype=object)");
+    
+    // Digit count function
+    m.def("fibonacci_digit_count",
+          [](long long n) -> long long { return fibonacci_digit_count(n); },
+          py::arg("n"),
+          "Get the number of digits in F(n).\n\n"
+          "Args:\n"
+          "    n: Non-negative integer index\n\n"
+          "Returns:\n"
+          "    Number of digits in the nth Fibonacci number\n\n"
+          "Example:\n"
+          "    >>> fibonacci_digit_count(1000)\n"
+          "    209");
     
     // Utility functions
-    m.def("get_num_cores", &get_num_cores,
+    m.def("get_num_cores",
+          []() -> int { return get_num_cores(); },
           "Get the number of available CPU cores.");
     
-    m.def("set_num_threads", &set_num_threads,
+    m.def("set_num_threads",
+          [](int n) { set_num_threads(n); },
           py::arg("n"),
           "Set the number of threads to use for parallel computation.");
     
-    m.def("get_phi", &get_phi,
-          "Get the golden ratio (φ = (1 + √5) / 2).");
-    
     // Constants
-    m.attr("PHI") = PHI;
-    m.attr("SQRT5") = SQRT5;
-    m.attr("__version__") = "1.0.0";
+    m.attr("__version__") = "2.0.0";
+    m.attr("METHOD") = "Matrix Exponentiation with GMP";
 }
-
