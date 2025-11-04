@@ -1,0 +1,15 @@
+MANIFEST.in
+PYTHON_USAGE.md
+README.md
+demo.py
+fib_bindings.cpp
+pyproject.toml
+setup.py
+test_fastfib.py
+fastfib/__init__.py
+fastfib.egg-info/PKG-INFO
+fastfib.egg-info/SOURCES.txt
+fastfib.egg-info/dependency_links.txt
+fastfib.egg-info/not-zip-safe
+fastfib.egg-info/requires.txt
+fastfib.egg-info/top_level.txt

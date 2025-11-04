@@ -1,0 +1,7 @@
+include README.md
+include PYTHON_USAGE.md
+include LICENSE
+include *.cpp
+include *.py
+recursive-include fastfib *.py
+
