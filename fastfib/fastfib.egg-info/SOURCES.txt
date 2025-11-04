@@ -3,8 +3,11 @@ PYTHON_USAGE.md
 README.md
 demo.py
 fib_bindings.cpp
+fib_bindings_fastdoubling.cpp
+fib_bindings_matrix_backup.cpp
 pyproject.toml
 setup.py
+setup_fastdoubling.py
 test_fastfib.py
 test_gmp.py
 fastfib/__init__.py

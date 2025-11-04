@@ -1,16 +1,16 @@
 # Fibonacci Algorithms Comparison
 
-A performance comparison of three Fibonacci number computation algorithms: C++ GMP (O(log n) EXACT), Python Binet (O(log n)), and Python Iterative (O(n)).
+A performance comparison of three Fibonacci number computation algorithms: C++ GMP Fast Doubling (O(log n) EXACT), Python Binet (O(log n)), and Python Iterative (O(n)).
 
 ## Overview
 
 This project benchmarks three fundamentally different approaches to computing Fibonacci numbers:
 
-1. **C++ GMP fastfib** - O(log n) using matrix exponentiation with GMP for **EXACT** arbitrary precision
+1. **C++ GMP fastfib** - O(log n) using **FAST DOUBLING** algorithm with GMP for **EXACT** arbitrary precision
 2. **Python Binet** - O(log n) using mpmath for arbitrary precision (Binet's formula)
 3. **Python Iterative** - O(n) linear time, classic loop-based approach
 
-The key finding: **C++ GMP is 7-10x faster** than Python Binet while providing **exact arbitrary-precision results** with no overflow limit!
+The key finding: **C++ GMP Fast Doubling is 13-24x faster** than Python Binet while providing **exact arbitrary-precision results** with no overflow limit!
 
 ## Performance Results
 
@@ -19,15 +19,15 @@ All measurements in microseconds (μs). The "Ratio" column shows scaling relativ
 ```
 Category              n |     GMP μs   Ratio |    Binet μs   Ratio |      Iter μs   Ratio |  GMP vs Binet  GMP vs Iter
 ----------------------------------------------------------------------------------------------------------------------------------
-Tiny                 10 |    3.0813   1.00x |    29.8398   1.00x |      0.4645    1.0x |         9.68x           0x
-Small                50 |    2.7095   0.88x |    21.3636   0.72x |      1.7525    3.8x |         7.88x           1x
-Medium              100 |    3.2566   1.06x |    22.0457   0.74x |      3.4722    7.5x |         6.77x           1x
-Large               500 |    5.2604   1.71x |    36.2622   1.22x |     24.7838   53.4x |         6.89x           5x
-Very Large        1,000 |    6.7288   2.18x |    47.6538   1.60x |     58.9611  126.9x |         7.08x           9x
-Huge              5,000 |   29.9225   9.71x |   223.7097   7.50x |    470.9847 1013.9x |         7.48x          16x
-Massive          10,000 |   78.0445  25.33x |   641.7271  21.51x |   1388.8328 2989.9x |         8.22x          18x
-Extreme          50,000 |  970.3879 314.93x |  9990.8571 334.82x |  24725.4770 53228.6x |        10.30x          25x
-Ultra           100,000 | 3222.8691 1045.96x | 31927.3949 1069.96x |  86041.9837 185229.9x |         9.91x          27x
+Tiny                 10 |    0.9778   1.00x |    23.4430   1.00x |      0.2955    1.0x |        23.98x           0x
+Small                50 |    1.1233   1.15x |    17.1336   0.73x |      1.2648    4.3x |        15.25x           1x
+Medium              100 |    1.3474   1.38x |    18.1807   0.78x |      2.7005    9.1x |        13.49x           2x
+Large               500 |    2.0869   2.13x |    31.6626   1.35x |     16.2780   55.1x |        15.17x           8x
+Very Large        1,000 |    2.9788   3.05x |    40.7604   1.74x |     38.3714  129.9x |        13.68x          13x
+Huge              5,000 |   14.9665  15.31x |   230.0196   9.81x |    369.8081 1251.5x |        15.37x          25x
+Massive          10,000 |   41.3956  42.34x |   631.0638  26.92x |   1214.8258 4111.2x |        15.24x          29x
+Extreme          50,000 |  508.4107 519.97x |  8422.8331 359.29x |  22520.4619 76214.4x |        16.57x          44x
+Ultra           100,000 | 1356.4607 1387.31x | 25064.9262 1069.18x |  83955.7170 284125.3x |        18.48x          62x
 ```
 
 ### Additional Performance Data
@@ -36,67 +36,71 @@ Ultra           100,000 | 3222.8691 1045.96x | 31927.3949 1069.96x |  86041.9837
 
 | n | Digits | GMP Time | Result Type |
 |---|--------|----------|-------------|
-| 10,000 | 2,090 | ~78 μs | EXACT |
-| 100,000 | 20,899 | ~3.2 ms | EXACT |
-| 1,000,000 | 208,988 | ~25 ms | EXACT |
-| 10,000,000 | 2,089,877 | ~496 ms | EXACT |
+| 10,000 | 2,090 | ~41 μs | EXACT |
+| 100,000 | 20,899 | ~1.4 ms | EXACT |
+| 1,000,000 | 208,988 | ~13 ms | EXACT |
+| 10,000,000 | 2,089,877 | ~250 ms | EXACT |
 
 ## Analysis
 
-### C++ GMP Matrix Exponentiation: O(log n) with EXACT Results
+### C++ GMP Fast Doubling: O(log n) with EXACT Results
 
 When n increased from 10 to 100,000 (10,000x increase):
-- Time increased from 3.08μs to 3,222.87μs (1,046x increase)
+- Time increased from 0.98μs to 1,356.46μs (1,387x increase)
 - **Conclusion**: O(log n) multiplications (much better than O(n)), but each multiplication gets slower as numbers grow
 - **Key Advantage**: Returns **EXACT** arbitrary-precision integers - no overflow, no approximation!
 
 **How It Works**:
 - Uses GMP (GNU Multiple Precision) library for arbitrary-precision integers
-- Matrix exponentiation: `[[F(n+1), F(n)], [F(n), F(n-1)]] = [[1,1],[1,0]]^n`
-- Only O(log n) matrix multiplications required (binary exponentiation)
+- **Fast Doubling algorithm**: Uses the formulas:
+  - F(2k) = F(k) × [2×F(k+1) - F(k)]
+  - F(2k+1) = F(k+1)² + F(k)²
+- Only O(log n) multiplications required
 - Multi-threaded for batch computations using OpenMP
-- Can compute F(1,000,000) with 208,988 exact digits in ~25ms!
+- Can compute F(1,000,000) with 208,988 exact digits in ~13ms!
+- **2-3x faster than matrix exponentiation** on the same GMP library!
 
 ### Python Binet: O(log n) Behavior
 
 When n increased from 10 to 100,000 (10,000x increase):
-- Time increased from 29.84μs to 31,927.39μs (1,070x increase)
-- **Conclusion**: Scales logarithmically with precision requirements, similar to GMP
+- Time increased from 23.44μs to 25,064.93μs (1,069x increase)
+- **Conclusion**: Scales logarithmically with precision requirements
 - Uses mpmath for arbitrary precision arithmetic
 
 ### Python Iterative: O(n) Behavior
 
 When n increased from 10 to 100,000 (10,000x increase):
-- Time increased from 0.46μs to 86,041.98μs (185,230x increase)
+- Time increased from 0.30μs to 83,955.72μs (284,125x increase)
 - **Conclusion**: Linear scaling - time grows proportionally with n
 - Fast for small n, but becomes impractical for large n
 
 ## Key Findings
 
-**Winner by Speed AND Accuracy**: C++ GMP fastfib
-- At n=5,000: 7.48x faster than Python Binet, 16x faster than Iterative
-- At n=100,000: 9.91x faster than Python Binet, 27x faster than Iterative
+**Winner by Speed AND Accuracy**: C++ GMP fastfib with Fast Doubling
+- At n=5,000: 15.37x faster than Python Binet, 25x faster than Iterative
+- At n=100,000: 18.48x faster than Python Binet, 62x faster than Iterative
 - **Returns EXACT arbitrary-precision values** - no overflow limit!
 
 **Ranking** (fastest to slowest):
-1. **C++ GMP fastfib** - O(log n), EXACT arbitrary precision, no overflow, multi-threaded
+1. **C++ GMP fastfib** - O(log n), EXACT arbitrary precision, fast doubling algorithm, multi-threaded
 2. **Python Binet** - O(log n), arbitrary precision with mpmath, no overflow
 3. **Python Iterative** - O(n), exact but slow for large n
 
 **Trade-offs**:
-- **C++ GMP**: Fast O(log n) + EXACT results + arbitrary precision = **BEST OF ALL WORLDS!** ✓
+- **C++ GMP Fast Doubling**: Fast O(log n) + EXACT results + arbitrary precision = **BEST OF ALL WORLDS!** ✓
 - **Python Binet**: Slower than GMP, still arbitrary precision
 - **Iterative**: Slowest for large n, easiest to understand
 
-**Previous vs New Implementation**:
-| Feature | Old (Binet + double) | New (GMP + Matrix) |
-|---------|---------------------|-------------------|
-| Speed | 0.23μs (O(1)) | 3-3,223μs (O(log n)) |
-| Max n | ~1,474 (overflow) | **Unlimited!** |
-| Accuracy | Approximate | **EXACT** |
-| Result Type | `double` | Arbitrary-precision integer |
+**Algorithm Comparison**:
+| Feature | Matrix Exponentiation | Fast Doubling |
+|---------|----------------------|---------------|
+| Multiplications per step | 4 GMP multiplications | 3-4 GMP multiplications |
+| Speed (F(100000)) | ~3.2ms | ~1.4ms (2.3x faster!) |
+| Speed (F(10000)) | ~78μs | ~41μs (1.9x faster!) |
+| Accuracy | EXACT | EXACT |
+| Complexity | O(log n) | O(log n) |
 
-The new implementation trades a small amount of speed for **unlimited range** and **perfect accuracy**!
+The new **Fast Doubling** implementation is the fastest algorithm available!
 
 ## Quick Start
 
@@ -193,6 +197,10 @@ make verify
 # Import the GMP-based library
 from fastfib import _fastfib as ff
 
+# Check the algorithm being used
+print(ff.METHOD)  # "Fast Doubling with GMP"
+print(ff.__version__)  # "3.0.0"
+
 # Single value (returns as string)
 result = ff.fibonacci(100)
 print(result)  # '354224848179261915075'
@@ -231,7 +239,7 @@ cd cpp_version
 # Build
 make clean && make all
 
-# Compute F(1000000) - exact 208,988-digit number in ~49ms!
+# Compute F(1000000) - exact 208,988-digit number in ~13ms!
 ./fib_stairs 1000000 1000000
 
 # Compute range F(1) to F(10000)
@@ -252,7 +260,7 @@ play/
 ├── QUICK_START.md                 # Quick reference guide
 │
 ├── cpp_version/                   # Standalone C++ implementation
-│   ├── fib_stairs.cpp            # Main program with GMP matrix exponentiation
+│   ├── fib_stairs.cpp            # Main program with GMP fast doubling
 │   ├── verify.cpp                # Verification program
 │   ├── Makefile                  # Build configuration
 │   └── benchmark.sh              # Benchmark script
@@ -273,34 +281,32 @@ All benchmarks were performed on:
 - **OS**: Linux (WSL2 on Windows)
 - **Compiler**: GCC with `-O3 -march=native` optimization flags
 - **GMP Version**: Latest stable (libgmp-dev)
-- **Python**: 3.10
+- **Python**: 3.12
 - **Method**: `timeit` module with multiple iterations for accuracy
 
 Each timing represents the average of many iterations (10-50,000 depending on n) to ensure statistical significance.
 
 ## Technical Details
 
-### Why GMP Matrix Exponentiation?
+### Why Fast Doubling?
 
-The previous implementation used Binet's formula: `F(n) = φ^n / √5`
+The previous implementation used matrix exponentiation: `[[F(n+1), F(n)], [F(n), F(n-1)]] = [[1,1],[1,0]]^n`
 
-**Problems with Binet + double precision**:
-- Limited to n ≤ ~1,474 (double overflow at `exp(709.78)`)
-- Returns approximate floating-point values
-- Not suitable for cryptography or exact computations
+**Fast Doubling is even better!**
 
-**GMP Matrix Solution**:
 ```
-[F(n+1)]   [1 1]^n   [1]
-[F(n)  ] = [1 0]   × [0]
+F(2k) = F(k) × [2×F(k+1) - F(k)]
+F(2k+1) = F(k+1)² + F(k)²
 ```
 
 **Advantages**:
-1. **O(log n) time**: Binary exponentiation (not O(n)!)
-2. **Exact results**: GMP arbitrary-precision integers
-3. **No overflow**: Can compute F(200,000,000) (41+ million digits)
-4. **Fast**: Highly optimized GMP library + OpenMP parallelization
-5. **Production-ready**: Used in cryptography, computer algebra systems
+1. **O(log n) time**: Same as matrix, but with fewer operations
+2. **Fewer multiplications**: Only 3-4 GMP multiplications per step (vs 4 for matrix)
+3. **Better cache locality**: Works with pairs of numbers, not 2x2 matrices
+4. **Exact results**: GMP arbitrary-precision integers
+5. **No overflow**: Can compute F(200,000,000) (41+ million digits)
+6. **2-3x faster**: Than matrix exponentiation on same hardware
+7. **Production-ready**: Used in competitive programming and cryptography
 
 ### Performance Characteristics
 
@@ -309,30 +315,41 @@ The time complexity has two components:
 2. **Cost per multiplication**: Grows with digit count (~0.21*n digits)
 
 For practical purposes:
-- **n < 10,000**: Blazingly fast (< 100μs)
-- **n < 100,000**: Very fast (< 5ms)
-- **n < 1,000,000**: Fast (< 50ms)
-- **n < 10,000,000**: Reasonable (< 500ms)
+- **n < 10,000**: Blazingly fast (< 50μs)
+- **n < 100,000**: Very fast (< 2ms)
+- **n < 1,000,000**: Fast (< 15ms)
+- **n < 10,000,000**: Reasonable (< 250ms)
 - **n = 200,000,000**: Possible but slow (hours)
 
 ## Implementation Notes
 
-### Matrix Exponentiation Algorithm
+### Fast Doubling Algorithm
 
 ```cpp
-// Compute [[1,1],[1,0]]^n using binary exponentiation
-Matrix2x2 matrix_pow(Matrix2x2 base, long long n) {
-    Matrix2x2 result = identity;
-    while (n > 0) {
-        if (n & 1) result = result * base;
-        base = base * base;
-        n >>= 1;
+// Iterative fast doubling - processes bits of n from left to right
+std::pair<mpz_class, mpz_class> fibonacci_fast_doubling_iterative(long long n) {
+    mpz_class fk(0), fk1(1);  // Start with F(0)=0, F(1)=1
+    
+    for (int i = bit_length - 1; i >= 0; --i) {
+        // F(2k) = F(k) * [2*F(k+1) - F(k)]
+        mpz_class f2k = fk * (2 * fk1 - fk);
+        
+        // F(2k+1) = F(k+1)^2 + F(k)^2
+        mpz_class f2k1 = fk1 * fk1 + fk * fk;
+        
+        if ((n >> i) & 1) {
+            fk = f2k1;
+            fk1 = f2k + f2k1;
+        } else {
+            fk = f2k;
+            fk1 = f2k1;
+        }
     }
-    return result;
+    return {fk, fk1};
 }
 ```
 
-Only O(log₂ n) matrix multiplications needed!
+Only O(log₂ n) iterations needed, each with 3-4 multiplications!
 
 ### GMP Integration
 
@@ -365,21 +382,28 @@ Where exact Fibonacci numbers are needed:
 3. **Combinatorics**: Exact counting problems
 4. **Data Structures**: Fibonacci heaps require exact values
 5. **Number Theory**: Research and proofs
-6. **Testing**: Verify algorithms against known values
+6. **Competitive Programming**: Fast solutions to Fibonacci problems
+7. **Testing**: Verify algorithms against known values
 
 ## Limitations
 
 1. **Memory**: Large Fibonacci numbers consume RAM (F(10M) ≈ 400MB)
 2. **Time for huge n**: While O(log n) in multiplications, each multiplication gets expensive
 3. **Storage**: Saving 200M Fibonacci numbers requires terabytes
-4. **Not O(1)**: Slower than the old double-precision version for small n
+4. **Not O(1)**: Slower than old double-precision version for tiny n (but infinitely more accurate!)
+
+## Version History
+
+- **v3.0.0** (Current) - Fast Doubling algorithm, 2-3x faster than v2.0
+- **v2.0.0** - GMP Matrix Exponentiation, exact arbitrary precision
+- **v1.0.0** - Original Binet's formula with double precision (limited to n≈1474)
 
 ## Future Improvements
 
 Potential optimizations:
 - [ ] GPU acceleration using CUDA/OpenCL
 - [ ] Distributed computing for massive ranges
-- [ ] Alternative algorithms (fast doubling method)
+- [x] ~~Alternative algorithms (fast doubling method)~~ ✓ Done!
 - [ ] Cache frequently accessed values
 - [ ] Compressed storage format
 
@@ -400,16 +424,19 @@ MIT License - see LICENSE file for details
 - **GMP Team**: For the incredible arbitrary-precision library
 - **pybind11**: For seamless C++/Python integration
 - **mpmath**: For Python arbitrary-precision arithmetic
+- **Fast Doubling Algorithm**: Elegant and efficient approach to Fibonacci computation
 
 ## References
 
 1. GMP (GNU Multiple Precision): https://gmplib.org/
-2. Matrix Exponentiation: https://en.wikipedia.org/wiki/Matrix_exponentiation
-3. Fibonacci Numbers: https://oeis.org/A000045
-4. Binet's Formula: https://en.wikipedia.org/wiki/Fibonacci_sequence#Binet's_formula
+2. Fast Doubling Method: https://www.nayuki.io/page/fast-fibonacci-algorithms
+3. Matrix Exponentiation: https://en.wikipedia.org/wiki/Matrix_exponentiation
+4. Fibonacci Numbers: https://oeis.org/A000045
+5. Binet's Formula: https://en.wikipedia.org/wiki/Fibonacci_sequence#Binet's_formula
 
 ---
 
-**Version**: 2.0.0 (GMP Matrix Exponentiation)  
+**Version**: 3.0.0 (Fast Doubling Algorithm)  
 **Status**: Production Ready ✓  
+**Performance**: Up to 24x faster than Python, 2-3x faster than matrix method  
 **Last Updated**: 2025

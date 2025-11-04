@@ -1,6 +1,7 @@
 /*
  * Python bindings for ultra-fast EXACT Fibonacci computation
  * Using pybind11 to expose C++ functions with GMP arbitrary precision
+ * FAST DOUBLING algorithm for better performance
  */
 
 #include <pybind11/pybind11.h>
@@ -8,63 +9,60 @@
 #include <pybind11/stl.h>
 #include <vector>
 #include <string>
+#include <utility>
 #include <omp.h>
 #include <gmp.h>
 #include <gmpxx.h>
 
 namespace py = pybind11;
 
-// Matrix 2x2 structure for GMP
-struct Matrix2x2 {
-    mpz_class a, b, c, d;  // [[a, b], [c, d]]
-    
-    Matrix2x2() : a(0), b(0), c(0), d(0) {}
-    Matrix2x2(long a_, long b_, long c_, long d_) 
-        : a(a_), b(b_), c(c_), d(d_) {}
-};
-
-// Multiply two 2x2 matrices
-inline Matrix2x2 matrix_mult(const Matrix2x2& A, const Matrix2x2& B) {
-    Matrix2x2 result;
-    result.a = A.a * B.a + A.b * B.c;
-    result.b = A.a * B.b + A.b * B.d;
-    result.c = A.c * B.a + A.d * B.c;
-    result.d = A.c * B.b + A.d * B.d;
-    return result;
-}
-
-// Fast matrix exponentiation: compute M^n in O(log n)
-Matrix2x2 matrix_pow(Matrix2x2 base, long long n) {
+// Iterative fast doubling (more efficient, avoids recursion overhead)
+std::pair<mpz_class, mpz_class> fibonacci_fast_doubling_iterative(long long n) {
     if (n == 0) {
-        return Matrix2x2(1, 0, 0, 1);  // Identity matrix
-    }
-    if (n == 1) {
-        return base;
+        return {mpz_class(0), mpz_class(1)};
     }
     
-    Matrix2x2 result(1, 0, 0, 1);  // Identity
+    // Find the highest bit position
+    int bit_length = 0;
+    long long temp = n;
+    while (temp > 0) {
+        bit_length++;
+        temp >>= 1;
+    }
     
-    while (n > 0) {
-        if (n & 1) {  // If n is odd
-            result = matrix_mult(result, base);
+    // Start from the highest bit and work down
+    mpz_class fk(0);
+    mpz_class fk1(1);
+    
+    for (int i = bit_length - 1; i >= 0; --i) {
+        // F(2k) = F(k) * [2*F(k+1) - F(k)]
+        mpz_class f2k = fk * (2 * fk1 - fk);
+        
+        // F(2k+1) = F(k+1)^2 + F(k)^2
+        mpz_class f2k1 = fk1 * fk1 + fk * fk;
+        
+        if ((n >> i) & 1) {
+            // Bit is 1, so we want F(2k+1) and F(2k+2)
+            fk = f2k1;
+            fk1 = f2k + f2k1;
+        } else {
+            // Bit is 0, so we want F(2k) and F(2k+1)
+            fk = f2k;
+            fk1 = f2k1;
         }
-        base = matrix_mult(base, base);
-        n >>= 1;
     }
     
-    return result;
+    return {fk, fk1};
 }
 
-// Compute exact Fibonacci number using matrix exponentiation
+// Compute exact Fibonacci number using fast doubling
 inline mpz_class fibonacci_exact_gmp(long long n) {
-    if (n == 0) return mpz_class(0);
-    if (n == 1) return mpz_class(1);
-    if (n == 2) return mpz_class(1);
+    if (n < 0) {
+        throw std::invalid_argument("n must be non-negative");
+    }
     
-    Matrix2x2 base(1, 1, 1, 0);
-    Matrix2x2 result = matrix_pow(base, n - 1);
-    
-    return result.a;
+    auto [fn, fn1] = fibonacci_fast_doubling_iterative(n);
+    return fn;
 }
 
 // Compute single Fibonacci number (returns as string for arbitrary precision)
@@ -223,13 +221,13 @@ void set_num_threads(int n) {
 
 // Module definition
 PYBIND11_MODULE(_fastfib, m) {
-    m.doc() = "Ultra-fast EXACT Fibonacci computation using GMP arbitrary precision and matrix exponentiation";
+    m.doc() = "Ultra-fast EXACT Fibonacci computation using GMP arbitrary precision and FAST DOUBLING algorithm";
     
     // Single value function (returns string)
     m.def("fibonacci", 
           [](long long n) -> std::string { return fibonacci(n); },
           py::arg("n"),
-          "Compute the nth Fibonacci number using matrix exponentiation (GMP).\n\n"
+          "Compute the nth Fibonacci number using fast doubling (GMP).\n\n"
           "Args:\n"
           "    n: Non-negative integer index\n\n"
           "Returns:\n"
@@ -336,6 +334,7 @@ PYBIND11_MODULE(_fastfib, m) {
           "Set the number of threads to use for parallel computation.");
     
     // Constants
-    m.attr("__version__") = "2.0.0";
-    m.attr("METHOD") = "Matrix Exponentiation with GMP";
+    m.attr("__version__") = "3.0.0";
+    m.attr("METHOD") = "Fast Doubling with GMP";
 }
+
