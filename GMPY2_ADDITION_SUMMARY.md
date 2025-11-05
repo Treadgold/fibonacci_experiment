@@ -74,8 +74,8 @@ Successfully expanded the Fibonacci comparison project to include **Python gmpy2
 4. **Python Iterative** - O(n), slow for large n
 
 ### Best Choice by Use Case:
-- **Need pure Python?** → **gmpy2** (fastest, no compilation)
-- **Need multi-threading?** → C++ GMP (parallelized)
+- **Need speed?** → **Python gmpy2** 🏆 (FASTEST, no compilation needed!)
+- **Need multi-threading for batches?** → C++ GMP (parallelized)
 - **Need maximum portability?** → mpmath Binet (pure Python, no C deps)
 - **Learning/simple code?** → Iterative (easiest to understand)
 
@@ -132,7 +132,7 @@ This addition reveals an important lesson for Python programmers:
 
 The key is using optimized libraries that provide efficient bindings to highly-optimized C code (GMP in this case). The Python interpreter overhead becomes negligible compared to the heavy lifting done by the GMP library.
 
-**Recommendation**: For Python users, **use gmpy2** - it's fast, accessible, and requires no C++ compilation!
+**Recommendation**: For Python users, **use gmpy2** - it's the FASTEST method, accessible, and requires no C++ compilation!
 
 ---
 

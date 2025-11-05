@@ -12,8 +12,8 @@ This project benchmarks four fundamentally different approaches to computing Fib
 4. **Python Iterative** - O(n) linear time, classic loop-based approach
 
 The key findings: 
-- **C++ GMP is the fastest overall** for most use cases
-- **Python gmpy2 is incredibly competitive** - sometimes even faster than C++ for certain values!
+- **Python gmpy2 is the FASTEST** for large values (n > 5,000) - up to 8.8x faster than C++!
+- **C++ GMP is fastest for small/medium values** and when multi-threading is needed
 - **gmpy2 is 5-16x faster** than pure Python mpmath while being easy to use
 - All approaches provide **exact arbitrary-precision results** with no overflow limit!
 
@@ -89,20 +89,20 @@ When n increased from 10 to 100,000 (10,000x increase):
 
 ## Key Findings
 
-**Winner by Speed AND Accuracy**: C++ GMP fastfib with Fast Doubling
-- At n=5,000: 15.37x faster than Python Binet, 25x faster than Iterative
-- At n=100,000: 18.48x faster than Python Binet, 62x faster than Iterative
+**Winner by Speed AND Accuracy**: Python gmpy2 with Fast Doubling!
+- At n=5,000: gmpy2 is 2.8x FASTER than C++, 8.7x faster than Binet
+- At n=100,000: gmpy2 is 8.8x FASTER than C++, 16.4x faster than Binet
 - **Returns EXACT arbitrary-precision values** - no overflow limit!
 
-**Ranking** (fastest to slowest):
-1. **C++ GMP fastfib** - O(log n), EXACT arbitrary precision, fast doubling, compiled C++, multi-threaded
-2. **Python gmpy2** - O(log n), EXACT arbitrary precision, fast doubling, Python + GMP bindings
-3. **Python Binet (mpmath)** - O(log n), arbitrary precision, Binet's formula, pure Python
+**Ranking by Speed** (fastest to slowest for large n):
+1. **Python gmpy2** 🥇 - O(log n), EXACT, **FASTEST** for n > 5,000, pure Python, no compilation!
+2. **C++ GMP fastfib** 🥈 - O(log n), EXACT, fastest for small n, multi-threaded for batches
+3. **Python Binet (mpmath)** 🥉 - O(log n), arbitrary precision, pure Python (mpmath)
 4. **Python Iterative** - O(n), exact but slow for large n
 
 **Trade-offs**:
-- **C++ GMP Fast Doubling**: Fastest overall + EXACT results + compiled performance = **BEST FOR SPEED!** ✓
-- **Python gmpy2 Fast Doubling**: Nearly as fast as C++ + EXACT results + pure Python = **BEST FOR PYTHON!** ✓
+- **Python gmpy2 Fast Doubling**: **FASTEST for large n** + EXACT + pure Python + no compilation = **WINNER!** 🏆
+- **C++ GMP Fast Doubling**: Fast for small n + EXACT + multi-threading = **Best for parallel batches** ✓
 - **Python Binet (mpmath)**: Slower, pure Python, still arbitrary precision
 - **Iterative**: Slowest for large n, easiest to understand
 
@@ -115,7 +115,7 @@ When n increased from 10 to 100,000 (10,000x increase):
 | Accuracy | EXACT | EXACT |
 | Complexity | O(log n) | O(log n) |
 
-The new **Fast Doubling** implementation is the fastest algorithm available!
+**Fast Doubling with Python gmpy2 is the fastest implementation available!** (C++ is 2nd fastest)
 
 ## The Binet's Formula Misconception: Why It's Not O(1)
 
@@ -184,12 +184,12 @@ This is why all practical "fast" Fibonacci algorithms converge to O(log n) behav
 - ✅ Accessibility: Works on any system with pip install gmpy2
 
 **Performance comparison at n=100,000:**
-- C++ GMP: 1,372 μs
-- **Python gmpy2: 156 μs** (8.8x faster! 🚀)
-- Python Binet: 2,548 μs
-- Python Iterative: 84,292 μs
+- **Python gmpy2: 156 μs** 🥇 **FASTEST!**
+- C++ GMP: 1,372 μs (8.8x slower)
+- Python Binet: 2,548 μs (16.4x slower)
+- Python Iterative: 84,292 μs (541x slower)
 
-**The lesson**: With the right library (gmpy2), Python can compete with compiled languages for computationally intensive tasks!
+**The lesson**: With the right library (gmpy2), Python can **exceed** compiled language performance for computationally intensive tasks!
 
 ## Quick Start
 
@@ -282,37 +282,14 @@ make verify
 
 ### Python API
 
-#### Option 1: C++ GMP (Fastest - Compiled Extension)
-
-```python
-# Import the GMP-based library
-from fastfib import _fastfib as ff
-
-# Check the algorithm being used
-print(ff.METHOD)  # "Fast Doubling with GMP"
-print(ff.__version__)  # "3.0.0"
-
-# Single value (returns as Python int - arbitrary precision)
-result = ff.fibonacci_int(100)
-print(result)  # 354224848179261915075
-
-# Range of values (as Python ints)
-values = ff.fibonacci_range_int(10, 20)
-# [55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765]
-
-# Utilities
-cores = ff.get_num_cores()  # 24
-ff.set_num_threads(8)  # Use 8 threads
-```
-
-#### Option 2: Python gmpy2 (Fast - Pure Python!)
+#### Option 1: Python gmpy2 (FASTEST - Pure Python!)
 
 ```python
 # Import gmpy2 (pip install gmpy2)
 import gmpy2
 
 def fibonacci_gmpy2(n):
-    """Fast Fibonacci using gmpy2 - pure Python!"""
+    """FASTEST Fibonacci implementation - pure Python with gmpy2!"""
     if n == 0: return 0
     if n == 1: return 1
     
@@ -337,7 +314,30 @@ def fibonacci_gmpy2(n):
 result = fibonacci_gmpy2(100)
 print(result)  # 354224848179261915075
 
-# Very competitive performance - sometimes faster than C++!
+# FASTEST method - up to 8.8x faster than C++ for large n!
+```
+
+#### Option 2: C++ GMP (Fast - Compiled Extension)
+
+```python
+# Import the C++ GMP library
+from fastfib import _fastfib as ff
+
+# Check the algorithm being used
+print(ff.METHOD)  # "Fast Doubling with GMP"
+print(ff.__version__)  # "3.0.0"
+
+# Single value (returns as Python int - arbitrary precision)
+result = ff.fibonacci_int(100)
+print(result)  # 354224848179261915075
+
+# Range of values (as Python ints)
+values = ff.fibonacci_range_int(10, 20)
+# [55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765]
+
+# Utilities
+cores = ff.get_num_cores()  # 24
+ff.set_num_threads(8)  # Use 8 threads for batch operations
 ```
 
 ### C++ Standalone
@@ -504,7 +504,7 @@ Where exact Fibonacci numbers are needed:
 
 ## Version History
 
-- **v3.0.0** (Current) - Fast Doubling algorithm, 2-3x faster than v2.0
+- **v3.0.0** (Current) - Fast Doubling algorithm, Python gmpy2 discovered to be FASTEST!
 - **v2.0.0** - GMP Matrix Exponentiation, exact arbitrary precision
 - **v1.0.0** - Original Binet's formula with double precision (limited to n≈1474)
 
@@ -548,5 +548,5 @@ MIT License - see LICENSE file for details
 
 **Version**: 3.0.0 (Fast Doubling Algorithm)  
 **Status**: Production Ready ✓  
-**Performance**: Up to 24x faster than Python, 2-3x faster than matrix method  
+**Performance**: Python gmpy2 is FASTEST (8.8x faster than C++ for large n!)  
 **Last Updated**: 2025
