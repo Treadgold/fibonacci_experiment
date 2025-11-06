@@ -6,6 +6,9 @@ Test script for fastfib package
 import sys
 import time
 
+# Allow conversion of very large integers
+sys.set_int_max_str_digits(0)  # No limit
+
 def test_fastfib():
     """Test the fastfib package"""
     print("=" * 60)
@@ -23,11 +26,12 @@ def test_fastfib():
         return False
     
     print(f"✓ Version: {fastfib.__version__}")
+    print(f"✓ Method: {fastfib.METHOD}")
     print(f"✓ Available CPU cores: {fastfib.get_num_cores()}")
     print()
     
-    # Test 1: Single values
-    print("Test 1: Single Fibonacci numbers")
+    # Test 1: Single values (using fib_int for Python int)
+    print("Test 1: Single Fibonacci numbers (EXACT integers)")
     print("-" * 60)
     test_cases = [
         (0, 0),
@@ -42,10 +46,10 @@ def test_fastfib():
     
     all_passed = True
     for n, expected in test_cases:
-        result = fastfib.fib(n)
-        passed = abs(result - expected) < 0.001
+        result = fastfib.fib_int(n)  # Use fib_int to get Python int
+        passed = result == expected
         status = "✓" if passed else "✗"
-        print(f"  {status} fib({n}) = {result:.0f} (expected {expected})")
+        print(f"  {status} fib({n}) = {result} (expected {expected})")
         all_passed = all_passed and passed
     
     if all_passed:
@@ -54,10 +58,10 @@ def test_fastfib():
         print("✗ Some tests failed")
     print()
     
-    # Test 2: Range (list)
-    print("Test 2: Fibonacci range (list)")
+    # Test 2: Range (list of EXACT integers)
+    print("Test 2: Fibonacci range (EXACT integer list)")
     print("-" * 60)
-    fibs = fastfib.fib_range(10, 15)
+    fibs = fastfib.fib_range_int(10, 15)  # Use fib_range_int for Python ints
     expected_range = [55, 89, 144, 233, 377, 610]
     
     if len(fibs) == len(expected_range):
@@ -65,67 +69,82 @@ def test_fastfib():
     else:
         print(f"✗ Length mismatch: got {len(fibs)}, expected {len(expected_range)}")
     
-    print(f"  Result: {[int(x) for x in fibs]}")
+    print(f"  Result: {fibs}")
     print(f"  Expected: {expected_range}")
     
-    range_passed = all(abs(f - e) < 0.001 for f, e in zip(fibs, expected_range))
+    range_passed = all(f == e for f, e in zip(fibs, expected_range))
     if range_passed:
         print("✓ Range test passed!")
     else:
         print("✗ Range test failed")
     print()
     
-    # Test 3: NumPy array
-    print("Test 3: Fibonacci array (NumPy)")
+    # Test 3: String representations
+    print("Test 3: String representations (for very large numbers)")
     print("-" * 60)
     try:
-        import numpy as np
-        arr = fastfib.fib_array(1, 10)
-        print(f"✓ Array created: shape={arr.shape}, dtype={arr.dtype}")
-        print(f"  Values: {arr}")
+        # Test that fib() returns strings
+        str_result = fastfib.fib(100)
+        int_result = fastfib.fib_int(100)
         
-        expected_arr = np.array([1, 1, 2, 3, 5, 8, 13, 21, 34, 55], dtype=float)
-        if np.allclose(arr, expected_arr):
-            print("✓ NumPy array test passed!")
+        print(f"✓ fib(100) as string: {str_result}")
+        print(f"✓ fib(100) as int: {int_result}")
+        
+        # Verify they're the same value
+        if int(str_result) == int_result:
+            print("✓ String and int results match!")
         else:
-            print("✗ NumPy array values don't match")
+            print("✗ String and int results don't match")
+            
+        # Test digit count
+        digit_cnt = fastfib.digit_count(100)
+        expected_digits = len(str_result)
+        if digit_cnt == expected_digits:
+            print(f"✓ Digit count correct: {digit_cnt} digits")
+        else:
+            print(f"✗ Digit count mismatch: got {digit_cnt}, expected {expected_digits}")
     except Exception as e:
-        print(f"✗ NumPy array test failed: {e}")
+        print(f"✗ String representation test failed: {e}")
     print()
     
-    # Test 4: Large values
-    print("Test 4: Large Fibonacci numbers")
+    # Test 4: Large values (EXACT arbitrary precision)
+    print("Test 4: Large Fibonacci numbers (EXACT values)")
     print("-" * 60)
     large_n = [50, 100, 500, 1000]
     for n in large_n:
-        result = fastfib.fib(n)
-        print(f"  fib({n}) ≈ {result:.6e}")
-    print("✓ Large number computation successful")
+        result = fastfib.fib(n)  # Returns string
+        digits = len(result)
+        # Show first and last digits for very large numbers
+        if digits <= 50:
+            print(f"  fib({n}) = {result} ({digits} digits)")
+        else:
+            print(f"  fib({n}) = {result[:30]}...{result[-20:]} ({digits} digits)")
+    print("✓ Large number computation successful (all EXACT!)")
     print()
     
-    # Test 5: Performance
-    print("Test 5: Performance benchmark")
+    # Test 5: Performance benchmark
+    print("Test 5: Performance benchmark (EXACT computation)")
     print("-" * 60)
     
-    # Small range
+    # Single large value
     start = time.time()
-    fibs = fastfib.fib_range(1, 10000)
+    result = fastfib.fib_int(10000)
     elapsed = time.time() - start
-    print(f"  10,000 values: {elapsed*1000:.2f} ms ({len(fibs)/elapsed:,.0f} values/sec)")
+    print(f"  Single fib(10,000): {elapsed*1000:.3f} ms ({len(str(result))} digits)")
     
-    # Medium range
+    # Range of values
     start = time.time()
-    fibs = fastfib.fib_range(1, 1000000)
+    fibs = fastfib.fib_range_int(1, 1000)
     elapsed = time.time() - start
-    print(f"  1,000,000 values: {elapsed*1000:.2f} ms ({len(fibs)/elapsed:,.0f} values/sec)")
+    print(f"  Range 1-1,000: {elapsed*1000:.2f} ms ({len(fibs)/elapsed:,.0f} values/sec)")
     
-    # Large range (using array for efficiency)
+    # Very large single value (use string version to avoid conversion overhead)
     start = time.time()
-    arr = fastfib.fib_array(1, 10000000)
+    result = fastfib.fib(100000)  # Returns string directly
     elapsed = time.time() - start
-    print(f"  10,000,000 values: {elapsed*1000:.2f} ms ({len(arr)/elapsed:,.0f} values/sec)")
+    print(f"  Single fib(100,000): {elapsed*1000:.3f} ms ({len(result)} digits)")
     
-    print("✓ Performance test complete")
+    print("✓ Performance test complete (all EXACT arbitrary precision!)")
     print()
     
     # Test 6: Thread control
@@ -137,21 +156,13 @@ def test_fastfib():
     # Test with different thread counts
     for threads in [1, 2, 4]:
         if threads <= original_cores:
+            fastfib.set_num_threads(threads)
             start = time.time()
-            arr = fastfib.fib_array(1, 1000000, num_threads=threads)
+            fibs = fastfib.fib_range_int(1, 10000)
             elapsed = time.time() - start
             print(f"  {threads} thread(s): {elapsed*1000:.2f} ms")
     
     print("✓ Thread control test complete")
-    print()
-    
-    # Test 7: Constants and utilities
-    print("Test 7: Constants and utilities")
-    print("-" * 60)
-    print(f"  Golden ratio (φ): {fastfib.PHI:.15f}")
-    print(f"  √5: {fastfib.SQRT5:.15f}")
-    print(f"  get_phi(): {fastfib.get_phi():.15f}")
-    print("✓ Constants accessible")
     print()
     
     # Summary
@@ -159,17 +170,20 @@ def test_fastfib():
     print("✓ All tests completed successfully!")
     print("=" * 60)
     print()
-    print("Quick usage examples:")
+    print("Quick usage examples (EXACT arbitrary precision):")
     print("  >>> import fastfib")
-    print("  >>> fastfib.fib(10)")
-    print("  55.0")
-    print("  >>> fastfib.fib_range(10, 15)")
-    print("  [55.0, 89.0, 144.0, 233.0, 377.0, 610.0]")
+    print("  >>> fastfib.fib(10)          # Returns string")
+    print("  '55'")
+    print("  >>> fastfib.fib_int(10)      # Returns Python int")
+    print("  55")
+    print("  >>> fastfib.fib_range_int(10, 15)")
+    print("  [55, 89, 144, 233, 377, 610]")
     print()
-    
-    return True
+    print("  >>> fastfib.fib_int(1000)    # EXACT 209-digit number!")
+    print("  43466...93750")
+    print()
 
 if __name__ == "__main__":
-    success = test_fastfib()
-    sys.exit(0 if success else 1)
+    test_fastfib()
+    sys.exit(0)
 

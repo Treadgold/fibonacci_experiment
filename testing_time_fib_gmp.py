@@ -200,16 +200,16 @@ def run_comparison_test():
     Compare C++ GMP vs Python gmpy2 vs Python Binet vs Iterative.
     """
     print("=" * 160)
-    print("FIBONACCI ALGORITHMS COMPARISON: C++ GMP vs Python gmpy2 vs Python Binet vs Iterative")
+    print("FIBONACCI ALGORITHMS COMPARISON")
     print("=" * 160)
     print()
     print("Comparing four approaches:")
-    print("  1. C++ GMP (fastfib) - Fast Doubling, EXACT arbitrary precision, compiled C++")
-    print("  2. Python gmpy2 - Fast Doubling, EXACT arbitrary precision, Python + GMP bindings")
-    print("  3. Python Binet (mpmath) - Binet's formula with arbitrary precision, pure Python")
-    print("  4. Python Iterative - Simple loop, O(n) linear time")
+    print("  1. C++ GMP (fastfib)      - Fast Doubling, EXACT arbitrary precision, compiled C++ with GMP")
+    print("  2. Python gmpy2           - Fast Doubling, EXACT arbitrary precision, Python with GMP bindings")
+    print("  3. Python Binet (mpmath)  - Binet's formula, arbitrary precision, pure Python with mpmath")
+    print("  4. Python Iterative       - Simple loop, EXACT, O(n) linear time")
     print()
-    print("The 'Ratio' column shows how each algorithm scales as n increases")
+    print("The 'Ratio' column shows how each algorithm scales as n increases (relative to n=10 baseline)")
     print()
     print("-" * 160)
     
@@ -228,11 +228,14 @@ def run_comparison_test():
     
     # Print header
     if FASTFIB_AVAILABLE and GMPY2_AVAILABLE:
-        print(f"{'Category':<12} {'n':>10} | {'C++ GMP μs':>11} {'Ratio':>7} | {'gmpy2 μs':>10} {'Ratio':>7} | {'Binet μs':>10} {'Ratio':>7} | {'Iter μs':>11} {'Ratio':>7} | {'C++ vs gmpy2':>12} {'C++ vs Binet':>13}")
+        print(f"{'Category':<12} {'n':>10} | {'C++ GMP':>13} {'Ratio':>7} | {'Py gmpy2':>11} {'Ratio':>7} | {'Py Binet':>11} {'Ratio':>7} | {'Py Iter':>12} {'Ratio':>7} | {'C++ vs':>8} | {'C++ vs':>8}")
+        print(f"{'':12} {'':>10} | {'(fastfib) μs':>13} {'':>7} | {'(GMP) μs':>11} {'':>7} | {'(mpmath) μs':>11} {'':>7} | {'(loop) μs':>12} {'':>7} | {'gmpy2':>8} | {'Binet':>8}")
     elif FASTFIB_AVAILABLE:
-        print(f"{'Category':<12} {'n':>10} | {'GMP μs':>10} {'Ratio':>7} | {'Binet μs':>11} {'Ratio':>7} | {'Iter μs':>12} {'Ratio':>7} | {'GMP vs Binet':>13} {'GMP vs Iter':>12}")
+        print(f"{'Category':<12} {'n':>10} | {'C++ GMP':>10} {'Ratio':>7} | {'Py Binet':>11} {'Ratio':>7} | {'Py Iter':>12} {'Ratio':>7} | {'C++ vs Binet':>13} {'C++ vs Iter':>12}")
+        print(f"{'':12} {'':>10} | {'(fastfib) μs':>10} {'':>7} | {'(mpmath) μs':>11} {'':>7} | {'(loop) μs':>12} {'':>7} | {'':>13} {'':>12}")
     else:
-        print(f"{'Category':<12} {'n':>10} | {'Binet μs':>12} {'Ratio':>8} | {'Iterative μs':>14} {'Ratio':>8} | {'Speedup':>10}")
+        print(f"{'Category':<12} {'n':>10} | {'Py Binet':>12} {'Ratio':>8} | {'Py Iterative':>14} {'Ratio':>8} | {'Speedup':>10}")
+        print(f"{'':12} {'':>10} | {'(mpmath) μs':>12} {'':>8} | {'(loop) μs':>14} {'':>8} | {'':>10}")
     print("-" * 160)
     
     gmp_results = []
@@ -322,12 +325,12 @@ def run_comparison_test():
         n_ratio = last_n / first_n
         gmp_ratio = last_gmp / first_gmp
         
-        print("C++ GMP FAST DOUBLING (O(log n)) BEHAVIOR:")
+        print("1. C++ GMP (fastfib) - FAST DOUBLING ALGORITHM:")
         print(f"  When n increased from {first_n:,} to {last_n:,} ({n_ratio:,.0f}x increase)")
         print(f"  Time increased from {first_gmp:.4f}μs to {last_gmp:.4f}μs ({gmp_ratio:.1f}x increase)")
         print(f"  ✓ O(log n) multiplications, but each multiplication gets slower as numbers grow")
         print(f"  ✓ Returns EXACT arbitrary-precision integers (no overflow!)")
-        print(f"  ✓ Compiled C++ with GMP - Maximum performance")
+        print(f"  ✓ Compiled C++ with GMP library - High performance")
         print()
     
     # gmpy2 Analysis
@@ -337,11 +340,11 @@ def run_comparison_test():
         n_ratio = last_n / first_n
         gmpy2_ratio = last_gmpy2 / first_gmpy2
         
-        print("PYTHON GMPY2 FAST DOUBLING (O(log n)) BEHAVIOR:")
+        print("2. Python gmpy2 - FAST DOUBLING WITH GMP BINDINGS:")
         print(f"  When n increased from {first_n:,} to {last_n:,} ({n_ratio:,.0f}x increase)")
         print(f"  Time increased from {first_gmpy2:.4f}μs to {last_gmpy2:.4f}μs ({gmpy2_ratio:.1f}x increase)")
-        print(f"  ✓ Same algorithm as C++, but with Python interpreter overhead")
-        print(f"  ✓ Uses GMP through Python bindings - still very fast!")
+        print(f"  ✓ Same fast doubling algorithm as C++, with Python interpreter overhead")
+        print(f"  ✓ Uses GMP library through Python bindings - Still very fast!")
         print(f"  ✓ Returns EXACT arbitrary-precision integers")
         print()
     
@@ -352,9 +355,10 @@ def run_comparison_test():
         n_ratio = last_n / first_n
         binet_ratio = last_binet / first_binet
         
-        print("PYTHON BINET (mpmath) BEHAVIOR:")
+        print("3. Python Binet (mpmath) - BINET'S FORMULA:")
         print(f"  When n increased from {first_n:,} to {last_n:,} ({n_ratio:,.0f}x increase)")
         print(f"  Time increased from {first_binet:.4f}μs to {last_binet:.4f}μs ({binet_ratio:.1f}x increase)")
+        print(f"  ✓ Uses mpmath library for arbitrary precision arithmetic")
         print(f"  ✓ Scales with precision needed (~O(log n))")
         print()
     
@@ -365,9 +369,10 @@ def run_comparison_test():
         n_ratio = last_n / first_n
         iter_ratio = last_iter / first_iter
         
-        print("ITERATIVE (O(n)) BEHAVIOR:")
+        print("4. Python Iterative - SIMPLE LOOP:")
         print(f"  When n increased from {first_n:,} to {last_n:,} ({n_ratio:,.0f}x increase)")
         print(f"  Time increased from {first_iter:.4f}μs to {last_iter:.4f}μs ({iter_ratio:.1f}x increase)")
+        print(f"  ✓ Classic for-loop adding consecutive Fibonacci numbers")
         print(f"  ✓ LINEAR scaling - time grows proportionally with n")
         print()
     
@@ -384,24 +389,24 @@ def run_comparison_test():
         cpp_vs_binet = binet_compare / gmp_compare
         gmpy2_vs_binet = binet_compare / gmpy2_compare
         
-        print(f"  At n={n_compare:,}:")
-        print(f"    - C++ GMP is {cpp_vs_gmpy2:.2f}x FASTER than Python gmpy2")
-        print(f"    - C++ GMP is {cpp_vs_binet:.2f}x FASTER than Python Binet")
-        print(f"    - Python gmpy2 is {gmpy2_vs_binet:.2f}x FASTER than Python Binet")
+        print(f"  Performance Comparison at n={n_compare:,}:")
+        print(f"    - C++ GMP (fastfib)    is {cpp_vs_gmpy2:.2f}x FASTER than Python gmpy2 (GMP bindings)")
+        print(f"    - C++ GMP (fastfib)    is {cpp_vs_binet:.2f}x FASTER than Python Binet (mpmath)")
+        print(f"    - Python gmpy2 (GMP)   is {gmpy2_vs_binet:.2f}x FASTER than Python Binet (mpmath)")
         print()
-        print("  🏆 OVERALL WINNER: C++ GMP fastfib - EXACT + FASTEST!")
+        print("  🏆 OVERALL WINNER: C++ GMP (fastfib) - EXACT + FASTEST!")
         print("  🥈 RUNNER-UP: Python gmpy2 - Fast doubling in pure Python!")
         print()
         print("  Ranking by speed (fastest to slowest):")
-        print("    1. C++ GMP        - O(log n), EXACT, compiled C++ with GMP")
-        print("    2. Python gmpy2   - O(log n), EXACT, Python + GMP bindings")
-        print("    3. Python Binet   - O(log n), arbitrary precision, pure Python (mpmath)")
-        print("    4. Iterative      - O(n), simple but slow for large n")
+        print("    1. C++ GMP (fastfib)     - O(log n), EXACT, compiled C++ with GMP library")
+        print("    2. Python gmpy2          - O(log n), EXACT, Python with GMP bindings")
+        print("    3. Python Binet (mpmath) - O(log n), arbitrary precision, pure Python")
+        print("    4. Python Iterative      - O(n), EXACT, simple loop but slow for large n")
         print()
         print("  Key Insights:")
-        print("    ✓ C++ is ~2-4x faster than Python gmpy2 (interpreter overhead)")
-        print("    ✓ gmpy2 is ~5-10x faster than mpmath Binet (GMP vs pure Python)")
-        print("    ✓ Both C++ and gmpy2 give EXACT arbitrary-precision results")
+        print("    ✓ C++ GMP is ~2-4x faster than Python gmpy2 (interpreter overhead)")
+        print("    ✓ Python gmpy2 is ~5-10x faster than Python Binet (GMP vs pure Python mpmath)")
+        print("    ✓ Both C++ GMP and Python gmpy2 give EXACT arbitrary-precision results")
         print("    ✓ Fast doubling algorithm works great in both C++ and Python!")
         print("    ✓ If you need Python: use gmpy2 - it's accessible and fast!")
     elif FASTFIB_AVAILABLE and gmp_results and binet_results and iterative_results:
@@ -414,29 +419,29 @@ def run_comparison_test():
         gmp_vs_iter = iter_compare / gmp_compare
         binet_vs_iter = iter_compare / binet_compare
         
-        print(f"  At n={n_compare:,}:")
-        print(f"    - GMP is {gmp_vs_binet:.2f}x FASTER than Python Binet")
-        print(f"    - GMP is {gmp_vs_iter:.0f}x FASTER than Iterative")
-        print(f"    - Python Binet is {binet_vs_iter:.1f}x FASTER than Iterative")
+        print(f"  Performance Comparison at n={n_compare:,}:")
+        print(f"    - C++ GMP (fastfib)    is {gmp_vs_binet:.2f}x FASTER than Python Binet (mpmath)")
+        print(f"    - C++ GMP (fastfib)    is {gmp_vs_iter:.0f}x FASTER than Python Iterative")
+        print(f"    - Python Binet (mpmath) is {binet_vs_iter:.1f}x FASTER than Python Iterative")
         print()
-        print("  🏆 OVERALL WINNER: C++ GMP fastfib - EXACT + FAST!")
+        print("  🏆 OVERALL WINNER: C++ GMP (fastfib) - EXACT + FAST!")
         print()
         print("  Ranking by speed (fastest to slowest):")
-        print("    1. C++ GMP        - O(log n), EXACT arbitrary precision, optimized with GMP")
-        print("    2. Python Binet   - O(log n), arbitrary precision with mpmath")
-        print("    3. Iterative      - O(n), simple but slow for large n")
+        print("    1. C++ GMP (fastfib)     - O(log n), EXACT arbitrary precision, compiled with GMP")
+        print("    2. Python Binet (mpmath) - O(log n), arbitrary precision, pure Python")
+        print("    3. Python Iterative      - O(n), EXACT, simple loop but slow for large n")
     
     print("=" * 130)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compare GMP Exact vs Python Binet vs Iterative Fibonacci"
+        description="Compare Fibonacci Algorithms: C++ GMP (fastfib), Python gmpy2, Python Binet (mpmath), Python Iterative"
     )
     parser.add_argument(
         "-n",
         type=int,
-        help="Compute and time a specific Fibonacci number with all algorithms"
+        help="Compute and time a specific Fibonacci number with all available algorithms"
     )
     
     args = parser.parse_args()
@@ -444,7 +449,7 @@ if __name__ == "__main__":
     if args.n is not None:
         # Single computation mode
         print(f"\n{'='*80}")
-        print(f"Computing F({args.n})")
+        print(f"Computing F({args.n}) with all available algorithms")
         print(f"{'='*80}\n")
         
         # Compute with all methods
@@ -461,10 +466,10 @@ if __name__ == "__main__":
         
         if not all_match:
             print("⚠️  WARNING: Algorithms produced different results!")
-            print(f"Python Binet: {result_binet}")
-            print(f"Iterative:    {result_iter}")
+            print(f"Python Binet (mpmath):    {result_binet}")
+            print(f"Python Iterative:         {result_iter}")
             if FASTFIB_AVAILABLE:
-                print(f"GMP:          {result_gmp}")
+                print(f"C++ GMP (fastfib):        {result_gmp}")
         else:
             result_str = str(result_binet)
             if len(result_str) <= 100:
@@ -482,19 +487,19 @@ if __name__ == "__main__":
         
         if FASTFIB_AVAILABLE:
             time_gmp = time_function(fibonacci_gmp, args.n, iterations=min(iterations, 1000))
-            print(f"GMP Matrix Exp:         {time_gmp:>10.4f} μs  [EXACT + FASTEST]")
+            print(f"C++ GMP (fastfib):        {time_gmp:>10.4f} μs  [EXACT + FASTEST]")
         
         time_binet = time_function(fibonacci_binet_mpmath, args.n, iterations=iterations)
         time_iter = time_function(fibonacci_iterative, args.n, iterations=iterations)
         
-        print(f"Python Binet (mpmath):  {time_binet:>10.4f} μs")
-        print(f"Iterative (O(n)):       {time_iter:>10.4f} μs")
+        print(f"Python Binet (mpmath):    {time_binet:>10.4f} μs")
+        print(f"Python Iterative (loop):  {time_iter:>10.4f} μs")
         
         print(f"\n{'Speedup Comparisons:':-^80}\n")
         if FASTFIB_AVAILABLE:
-            print(f"GMP vs Python Binet: {time_binet/time_gmp:>6.2f}x faster")
-            print(f"GMP vs Iterative:    {time_iter/time_gmp:>6.0f}x faster")
-        print(f"Binet vs Iterative:  {time_iter/time_binet:>6.1f}x faster")
+            print(f"C++ GMP vs Python Binet:     {time_binet/time_gmp:>6.2f}x faster")
+            print(f"C++ GMP vs Python Iterative: {time_iter/time_gmp:>6.0f}x faster")
+        print(f"Python Binet vs Iterative:   {time_iter/time_binet:>6.1f}x faster")
         print(f"\n{'='*80}\n")
     else:
         # Default: run comparison test
